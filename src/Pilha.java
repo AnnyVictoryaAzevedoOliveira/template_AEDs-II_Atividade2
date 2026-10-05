@@ -54,7 +54,27 @@ public class Pilha<E> {
 	 */
 	public Pilha<E> subPilha(int numItens) {
 		
-		// TODO
-		return null;
+		if (numItens < 0) {
+			throw new IllegalArgumentException ("Numero de itens negativo");
+		}
+
+		Pilha<E>aux = new Pilha<E>();
+		Celula<E> atual = topo;
+
+		for (int i = 0; i< numItens; i++){
+			if(atual == fundo){
+				throw new IllegalArgumentException("A pilha nao tem " + numItens + " itens");
+			}
+			aux.empilhar(atual.getItem());
+			atual = atual.getProximo();
+		}
+
+		Pilha<E> subPilha = new Pilha<E>();
+		while(!aux.vazia()){
+			subPilha.empilhar(aux.desempilhar());
+		}
+
+		return subPilha;
+
 	}
 }

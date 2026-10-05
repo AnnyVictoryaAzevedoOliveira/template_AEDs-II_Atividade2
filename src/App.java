@@ -210,7 +210,15 @@ public class App {
      */
     public static void finalizarPedido(Pedido pedido) {
     	
-    	// TODO
+        cabecalho();
+        if(pedido == null){
+            System.out.println("Nao tem pedido em aberto");
+            return;
+        }
+
+        pilhaPedidos.empilhar(pedido);
+        System.out.println("Pedido finalizado");
+        System.out.println(pedido);
     }
     
     public static void listarProdutosPedidosRecentes() {
