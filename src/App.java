@@ -19,8 +19,11 @@ public class App {
     /** Quantidade de produtos cadastrados atualmente no vetor */
     static int quantosProdutos = 0;
 
-    /** Pilha de pedidos */
+    /** Pilha de pedidos (o mais recente fica no topo) */
     static Pilha<Pedido> pilhaPedidos = new Pilha<>();
+
+    /** Fila de pedidos (armazenados por ordem de chegada) */
+    static Fila<Pedido> filaPedidos = new Fila<>();
         
     static void limparTela() {
         System.out.print("\033[H\033[2J");
@@ -52,7 +55,22 @@ public class App {
         }
         return valor;
     }
-    
+
+    /**
+     * Lê um valor decimal do teclado, aceitando vírgula ou ponto como separador decimal.
+     * @param mensagem Mensagem exibida ao usuário.
+     * @return O valor lido, ou null caso o texto digitado não seja um número válido.
+     */
+    static Double lerValor(String mensagem) {
+
+    	System.out.println(mensagem);
+    	try {
+    		return Double.parseDouble(teclado.nextLine().trim().replace(",", "."));
+    	} catch (NumberFormatException excecao) {
+    		return null;
+    	}
+    }
+
     /** Imprime o menu principal, lê a opção do usuário e a retorna (int).
      * @return Um inteiro com a opção do usuário.
      */
@@ -64,6 +82,9 @@ public class App {
         System.out.println("4 - Iniciar novo pedido");
         System.out.println("5 - Fechar pedido");
         System.out.println("6 - Listar produtos dos pedidos mais recentes");
+        System.out.println("7 - Exibir o valor total médio dos N primeiros pedidos");
+        System.out.println("8 - Exibir os primeiros pedidos com valor total acima de um determinado valor");
+        System.out.println("9 - Exibir os primeiros pedidos que apresentam um determinado produto");
         System.out.println("0 - Sair");
         System.out.print("Digite sua opção: ");
         return Integer.parseInt(teclado.nextLine());
@@ -205,9 +226,9 @@ public class App {
     }
     
     /**
-     * Finaliza um pedido, momento no qual ele deve ser armazenado em uma pilha de pedidos.
-     * A pilha (LIFO) é a estrutura adequada porque o pedido finalizado mais recentemente
-     * fica sempre no topo, sendo o primeiro a ser consultado.
+     * Finaliza um pedido, momento no qual ele deve ser armazenado na pilha e na fila de pedidos.
+     * A pilha (LIFO) mantém o pedido finalizado mais recentemente no topo, sendo o primeiro a ser consultado.
+     * A fila (FIFO) mantém os pedidos por ordem de chegada, com o mais antigo na frente.
      * @param pedido O pedido que deve ser finalizado.
      */
     public static void finalizarPedido(Pedido pedido) {
@@ -220,6 +241,7 @@ public class App {
     	}
 
     	pilhaPedidos.empilhar(pedido);
+    	filaPedidos.enfileirar(pedido);
     	System.out.println("Pedido finalizado e armazenado com sucesso!");
     	System.out.println(pedido);
     }
@@ -268,6 +290,118 @@ public class App {
     	}
     }
     
+    /**
+     * Verifica se há pedidos na fila e lê do usuário quantos dos primeiros pedidos devem ser considerados.
+     * @return A quantidade informada, ou null se a fila estiver vazia ou a quantidade for inválida.
+     */
+    static Integer lerQuantidadePrimeirosPedidos() {
+
+    	if (filaPedidos.vazia()) {
+    		System.out.println("Nenhum pedido foi finalizado até o momento.");
+    		return null;
+    	}
+
+    	Integer quantidade = lerOpcao("Quantos dos primeiros pedidos deseja considerar?", Integer.class);
+    	if (quantidade == null || quantidade <= 0) {
+    		System.out.println("Quantidade inválida de pedidos.");
+    		return null;
+    	}
+
+    	return quantidade;
+    }
+
+    /**
+     * Exibe todos os pedidos de uma fila, do primeiro ao último.
+     * A fila recebida é esvaziada durante a exibição (deve ser uma fila auxiliar, como a retornada por filtrar).
+     * @param pedidos Fila com os pedidos a serem exibidos.
+     */
+    static void exibirPedidos(Fila<Pedido> pedidos) {
+
+    	if (pedidos.vazia()) {
+    		System.out.println("Nenhum pedido encontrado.");
+    		return;
+    	}
+
+    	while (!pedidos.vazia()) {
+    		System.out.println(pedidos.desenfileirar());
+    	}
+    }
+
+    /**
+     * Exibe o valor total médio dos N primeiros pedidos da fila de pedidos.
+     * O usuário informa quantos pedidos devem ser considerados.
+     */
+    public static void exibirValorMedioPedidos() {
+
+    	cabecalho();
+
+    	Integer quantidade = lerQuantidadePrimeirosPedidos();
+    	if (quantidade == null) {
+    		return;
+    	}
+
+    	try {
+    		double valorMedio = filaPedidos.calcularValorMedio(Pedido::valorFinal, quantidade);
+    		System.out.println(String.format("Valor total médio dos primeiros pedidos (%d): R$ %.2f", quantidade, valorMedio));
+    	} catch (IllegalArgumentException excecao) {
+    		System.out.println("Não há " + quantidade + " pedidos na fila.");
+    	}
+    }
+
+    /**
+     * Exibe, dentre os N primeiros pedidos da fila, aqueles com valor total acima de um valor informado pelo usuário.
+     */
+    public static void exibirPedidosAcimaDeValor() {
+
+    	cabecalho();
+
+    	Integer quantidade = lerQuantidadePrimeirosPedidos();
+    	if (quantidade == null) {
+    		return;
+    	}
+
+    	Double valorMinimo = lerValor("Exibir pedidos com valor total acima de (R$):");
+    	if (valorMinimo == null) {
+    		System.out.println("Valor inválido.");
+    		return;
+    	}
+
+    	try {
+    		Fila<Pedido> pedidosFiltrados = filaPedidos.filtrar(pedido -> pedido.valorFinal() > valorMinimo, quantidade);
+    		System.out.println(String.format("\nPedidos, dentre os primeiros (%d), com valor total acima de R$ %.2f:", quantidade, valorMinimo));
+    		exibirPedidos(pedidosFiltrados);
+    	} catch (IllegalArgumentException excecao) {
+    		System.out.println("Não há " + quantidade + " pedidos na fila.");
+    	}
+    }
+
+    /**
+     * Exibe, dentre os N primeiros pedidos da fila, aqueles que contêm um produto informado pelo usuário.
+     */
+    public static void exibirPedidosComProduto() {
+
+    	cabecalho();
+
+    	Integer quantidade = lerQuantidadePrimeirosPedidos();
+    	if (quantidade == null) {
+    		return;
+    	}
+
+    	Produto produto = localizarProdutoDescricao();
+    	if (produto == null) {
+    		System.out.println("Produto não encontrado.");
+    		return;
+    	}
+
+    	try {
+    		Fila<Pedido> pedidosFiltrados = filaPedidos.filtrar(pedido -> pedido.existeNoPedido(produto) != null, quantidade);
+    		System.out.println(String.format("\nPedidos, dentre os primeiros (%d), que contêm o produto %s:", quantidade, produto.descricao));
+    		exibirPedidos(pedidosFiltrados);
+    	} catch (IllegalArgumentException excecao) {
+    		System.out.println("Não há " + quantidade + " pedidos na fila.");
+    	}
+    }
+
 	public static void main(String[] args) {
 		
 		teclado = new Scanner(System.in, Charset.forName("UTF-8"));
@@ -291,6 +425,9 @@ public class App {
                     pedido = null; 
                 }
                 case 6 -> listarProdutosPedidosRecentes();
+                case 7 -> exibirValorMedioPedidos();
+                case 8 -> exibirPedidosAcimaDeValor();
+                case 9 -> exibirPedidosComProduto();
             }
             pausa();
         }while(opcao != 0);       
