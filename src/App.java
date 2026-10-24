@@ -206,24 +206,66 @@ public class App {
     
     /**
      * Finaliza um pedido, momento no qual ele deve ser armazenado em uma pilha de pedidos.
+     * A pilha (LIFO) é a estrutura adequada porque o pedido finalizado mais recentemente
+     * fica sempre no topo, sendo o primeiro a ser consultado.
      * @param pedido O pedido que deve ser finalizado.
      */
     public static void finalizarPedido(Pedido pedido) {
-    	
-        cabecalho();
-        if(pedido == null){
-            System.out.println("Nao tem pedido em aberto");
-            return;
-        }
 
-        pilhaPedidos.empilhar(pedido);
-        System.out.println("Pedido finalizado");
-        System.out.println(pedido);
+    	cabecalho();
+
+    	if (pedido == null) {
+    		System.out.println("Não há pedido em aberto. Inicie um novo pedido antes de finalizá-lo.");
+    		return;
+    	}
+
+    	pilhaPedidos.empilhar(pedido);
+    	System.out.println("Pedido finalizado e armazenado com sucesso!");
+    	System.out.println(pedido);
     }
-    
+
+    /**
+     * Lista os produtos incluídos nos pedidos mais recentemente finalizados.
+     * O usuário informa quantos pedidos recentes deseja consultar. Os pedidos são exibidos
+     * do mais recente para o mais antigo. A pilha de pedidos não é alterada.
+     */
     public static void listarProdutosPedidosRecentes() {
-    	
-    	// TODO
+
+    	cabecalho();
+
+    	if (pilhaPedidos.vazia()) {
+    		System.out.println("Nenhum pedido foi finalizado até o momento.");
+    		return;
+    	}
+
+    	Integer numPedidos = lerOpcao("Quantos pedidos recentes deseja consultar?", Integer.class);
+    	if (numPedidos == null || numPedidos <= 0) {
+    		System.out.println("Quantidade inválida de pedidos.");
+    		return;
+    	}
+
+    	Pilha<Pedido> pedidosRecentes;
+    	try {
+    		pedidosRecentes = pilhaPedidos.subPilha(numPedidos);
+    	} catch (IllegalArgumentException excecao) {
+    		System.out.println("Não há " + numPedidos + " pedidos finalizados para consultar.");
+    		return;
+    	}
+
+    	if (numPedidos == 1) {
+    		System.out.println("\nPRODUTOS DO PEDIDO MAIS RECENTE:");
+    	} else {
+    		System.out.println("\nPRODUTOS DOS " + numPedidos + " PEDIDOS MAIS RECENTES:");
+    	}
+    	while (!pedidosRecentes.vazia()) {
+    		Pedido pedido = pedidosRecentes.desempilhar();
+    		System.out.println("\nPedido " + pedido.hashCode() + ":");
+    		for (ItemDePedido item : pedido.getItensDoPedido()) {
+    			if (item != null) {
+    				System.out.println(String.format("  - %s (quantidade: %02d)", item.getProduto(), item.getQuantidade()));
+    			}
+    		}
+    	}
     }
     
 	public static void main(String[] args) {
@@ -244,7 +286,10 @@ public class App {
                 case 2 -> mostrarProduto(localizarProduto());
                 case 3 -> mostrarProduto(localizarProdutoDescricao());
                 case 4 -> pedido = iniciarPedido();
-                case 5 -> finalizarPedido(pedido);
+                case 5 -> {
+                    finalizarPedido(pedido);
+                    pedido = null; 
+                }
                 case 6 -> listarProdutosPedidosRecentes();
             }
             pausa();
